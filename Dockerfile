@@ -1,22 +1,24 @@
-FROM python:3.11-slim
+FROM continuumio/miniconda3:latest
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    sqlite3 \
-    && rm -rf /var/lib/apt/lists/*
+# Install core dependencies with conda (handles glibc compatibility)
+RUN conda install -y -c conda-forge \
+    python=3.11 \
+    numpy=1.24.3 \
+    pandas=2.0.3 \
+    pytz \
+    && conda clean -afy
 
-# Copy & install Python dependencies
+# Install pip-only packages
 COPY requirements.txt .
-RUN pip install --upgrade --no-cache-dir pip setuptools wheel && \
-    pip install --no-cache-dir pytz -r requirements.txt
+RUN pip install --no-cache-dir alpaca-py==0.33.1 python-dotenv==1.0.1 yfinance==0.2.43
 
-# Copy application files (including new modules)
+# Copy application files
 COPY bot.py report.py notify.py status.py secrets.py db.py ./
 
 # Create logs directory
 RUN mkdir -p /app/logs
 
-# Run bot (will load secrets from environment, not .env)
-CMD ["python3", "bot.py"]
+# Run bot
+CMD ["python", "bot.py"]
