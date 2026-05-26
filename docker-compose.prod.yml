@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Main trading bot
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: alpaca-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Override/add environment variables (not in .env)
+      - ALPACA_PAPER=true
+    volumes:
+      - ./trading.db:/app/trading.db  # Persistent database
+      - ./logs:/app/logs              # Persistent logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sqlite3; sqlite3.connect('/app/trading.db').execute('SELECT 1'); print('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - alpaca-net
+
+  # Health monitor watchdog (auto-restart on failure)
+  watchdog:
+    build:
+      context: .
+      dockerfile: Dockerfile.watchdog
+    container_name: alpaca-watchdog
+    restart: unless-stopped
+    depends_on:
+      - bot
+    environment:
+      - BOT_CONTAINER_NAME=alpaca-bot
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Access Docker daemon
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    networks:
+      - alpaca-net
+
+  # Dashboard (unchanged)
+  dashboard:
+    image: nginx:alpine
+    container_name: alpaca-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public_html:/usr/share/nginx/html:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    networks:
+      - alpaca-net
+
+networks:
+  alpaca-net:
+    driver: bridge

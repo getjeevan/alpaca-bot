@@ -1,0 +1,30 @@
+services:
+
+  bot:
+    build: .
+    container_name: alpaca-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - ALPACA_PAPER=true
+    volumes:
+      - ./logs:/app/logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  dashboard:
+    image: nginx:alpine
+    container_name: alpaca-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public_html:/usr/share/nginx/html:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"

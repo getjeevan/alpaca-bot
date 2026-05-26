@@ -1,0 +1,29 @@
+[Unit]
+Description=Alpaca Bot Watchdog - Health Check & Auto-Restart
+Documentation=Monitor alpaca-bot.service health every 60s
+PartOf=alpaca-bot.service
+After=alpaca-bot.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/alpaca-bot
+ExecStart=/usr/bin/python3 -u watchdog.py
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=600s
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=128M
+CPUQuota=10%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alpaca-watchdog
+
+[Install]
+WantedBy=multi-user.target

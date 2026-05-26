@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Alpaca Paper Trading Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #7c6cfc;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+
+  /* grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* header */
+  header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2.5rem; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+  .logo h1 { font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); }
+  .logo span { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.06em; display: block; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  #live-badge { font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border2); color: var(--muted); letter-spacing: 0.06em; }
+  #live-badge.on { border-color: var(--green); color: var(--green); }
+  .btn { font-family: var(--mono); font-size: 11px; padding: 7px 14px; border-radius: 4px; border: 1px solid var(--border2); background: transparent; color: var(--text); cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: var(--surface2); border-color: var(--accent); }
+
+  /* connect panel */
+  .connect-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+  .connect-panel p { font-size: 13px; color: var(--muted); margin-bottom: 1rem; line-height: 1.6; }
+  .fields { display: flex; gap: 10px; flex-wrap: wrap; }
+  .fields input { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--border2); border-radius: 4px; padding: 9px 12px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .fields input::placeholder { color: var(--muted); }
+  .fields input:focus { border-color: var(--accent); }
+  .connect-btn { font-family: var(--mono); font-size: 12px; padding: 9px 20px; border-radius: 4px; border: 1px solid var(--accent); background: rgba(124,108,252,0.12); color: var(--accent2); cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s; white-space: nowrap; }
+  .connect-btn:hover { background: rgba(124,108,252,0.22); }
+
+  /* error */
+  .error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--red); margin-bottom: 1.5rem; font-family: var(--mono); display: none; }
+
+  /* metrics */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; position: relative; overflow: hidden; }
+  .metric::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); opacity: 0; transition: opacity 0.3s; }
+  .metric.loaded::after { opacity: 1; }
+  .metric-label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); margin-bottom: 10px; }
+  .metric-value { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--text); }
+  .metric-sub { font-size: 12px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+  .metric-value.pos { color: var(--green); }
+  .metric-value.neg { color: var(--red); }
+  .pdt-bar { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .pdt-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 0.5s; }
+  .pdt-fill.warn { background: var(--red); }
+
+  /* sections */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.2rem; overflow: hidden; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.4rem; border-bottom: 1px solid var(--border); }
+  .section-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .section-count { font-family: var(--mono); font-size: 11px; color: var(--accent2); background: rgba(124,108,252,0.12); padding: 2px 8px; border-radius: 3px; }
+  .section-body { padding: 0; }
+
+  /* table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .sym { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--accent2); }
+  .badge { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 3px; letter-spacing: 0.04em; }
+  .badge-buy { background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.25); }
+  .badge-sell { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .pos { color: var(--green); font-family: var(--mono); }
+  .neg { color: var(--red); font-family: var(--mono); }
+  .neutral { color: var(--muted); font-family: var(--mono); }
+  .empty { padding: 2rem; text-align: center; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+  /* footer */
+  footer { margin-top: 3rem; text-align: center; font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.06em; }
+  footer span { color: var(--accent2); }
+
+  @media (max-width: 600px) {
+    .fields { flex-direction: column; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>ALPACA PAPER</h1>
+        <span>TRADING DASHBOARD</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="live-badge">OFFLINE</div>
+      <button class="btn" onclick="loadAll()">↻ REFRESH</button>
+    </div>
+  </header>
+
+  <div class="connect-panel">
+    <p>Enter your Alpaca paper trading API keys to connect. Keys are used only in your browser and never stored or sent anywhere else.</p>
+    <div class="fields">
+      <input type="text" id="api-key" placeholder="Key ID — starts with PK..." autocomplete="off" />
+      <input type="password" id="secret-key" placeholder="Secret key" autocomplete="off" />
+      <button class="connect-btn" onclick="loadAll()">CONNECT →</button>
+    </div>
+  </div>
+
+  <div class="error" id="err"></div>
+
+  <div class="metrics" id="metrics">
+    <div class="metric"><div class="metric-label">Equity</div><div class="metric-value neutral">—</div></div>
+    <div class="metric"><div class="metric-label">Cash</div><div class="metric-value neutral">—</div></div>
+    <div class="metric"><div class="metric-label">Today's P&L</div><div class="metric-value neutral">—</div></div>
+    <div class="metric"><div class="metric-label">Day trades (5d)</div><div class="metric-value neutral">—</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Open positions</span>
+      <span class="section-count" id="pos-count">—</span>
+    </div>
+    <div class="section-body" id="positions"><div class="empty">Connect to view positions</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Recent orders</span>
+      <span class="section-count" id="ord-count">—</span>
+    </div>
+    <div class="section-body" id="orders"><div class="empty">Connect to view orders</div></div>
+  </div>
+
+  <footer>Built for <span>Alpaca Paper Trading</span> · Keys never leave your browser</footer>
+</div>
+
+<script>
+const BASE = 'https://paper-api.alpaca.markets/v2';
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('api-key').value = 'PKHIOZYE3ESUZ6WFNDMRENTOZT';
+  document.getElementById('secret-key').value = 'DwuBhWwSdiqiL7VU1dKgvLEDQSxmztZTuqhxY1dttX1Y';
+  loadAll();
+});
+
+function keys() {
+  return {
+    key: document.getElementById('api-key').value.trim(),
+    secret: document.getElementById('secret-key').value.trim()
+  };
+}
+
+function hdrs() {
+  const k = keys();
+  return { 'APCA-API-KEY-ID': k.key, 'APCA-API-SECRET-KEY': k.secret };
+}
+
+function fmt(n) {
+  return '$' + parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function setErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function loadAll() {
+  const k = keys();
+  if (!k.key || !k.secret) { setErr('Please enter your API Key ID and Secret Key.'); return; }
+  setErr('');
+  document.getElementById('live-badge').textContent = 'CONNECTING...';
+  document.getElementById('live-badge').className = '';
+
+  try {
+    const [acct, positions, orders] = await Promise.all([
+      fetch(`${BASE}/account`, { headers: hdrs() }).then(r => r.json()),
+      fetch(`${BASE}/positions`, { headers: hdrs() }).then(r => r.json()),
+      fetch(`${BASE}/orders?status=all&limit=20&direction=desc`, { headers: hdrs() }).then(r => r.json()),
+    ]);
+
+    if (acct.code || acct.message?.includes('forbidden') || acct.message?.includes('unauthorized')) {
+      setErr('Authentication failed: ' + (acct.message || 'Check your keys and make sure they are paper trading keys.'));
+      document.getElementById('live-badge').textContent = 'ERROR';
+      return;
+    }
+
+    document.getElementById('live-badge').textContent = 'LIVE';
+    document.getElementById('live-badge').className = 'on';
+
+    const equity = parseFloat(acct.equity);
+    const lastEquity = parseFloat(acct.last_equity);
+    const todayPL = equity - lastEquity;
+    const todayPct = ((todayPL / lastEquity) * 100).toFixed(2);
+    const plCls = todayPL >= 0 ? 'pos' : 'neg';
+    const plSign = todayPL >= 0 ? '+' : '';
+    const pdt = parseInt(acct.daytrade_count) || 0;
+    const pdtPct = Math.min((pdt / 3) * 100, 100);
+
+    document.getElementById('metrics').innerHTML = `
+      <div class="metric loaded">
+        <div class="metric-label">Equity</div>
+        <div class="metric-value">${fmt(equity)}</div>
+        <div class="metric-sub">Paper account</div>
+      </div>
+      <div class="metric loaded">
+        <div class="metric-label">Cash</div>
+        <div class="metric-value">${fmt(acct.cash)}</div>
+        <div class="metric-sub">Available</div>
+      </div>
+      <div class="metric loaded">
+        <div class="metric-label">Today's P&L</div>
+        <div class="metric-value ${plCls}">${plSign}${fmt(todayPL)}</div>
+        <div class="metric-sub ${plCls}">${plSign}${todayPct}%</div>
+      </div>
+      <div class="metric loaded">
+        <div class="metric-label">Day trades (5d)</div>
+        <div class="metric-value ${pdt >= 3 ? 'neg' : ''}">${pdt} / 3</div>
+        <div class="pdt-bar"><div class="pdt-fill ${pdt >= 3 ? 'warn' : ''}" style="width:${pdtPct}%"></div></div>
+      </div>
+    `;
+
+    // positions
+    document.getElementById('pos-count').textContent = Array.isArray(positions) ? positions.length : 0;
+    if (!Array.isArray(positions) || positions.length === 0) {
+      document.getElementById('positions').innerHTML = '<div class="empty">No open positions</div>';
+    } else {
+      const rows = positions.map(p => {
+        const unreal = parseFloat(p.unrealized_pl);
+        const unrPct = (parseFloat(p.unrealized_plpc) * 100).toFixed(2);
+        const cls = unreal >= 0 ? 'pos' : 'neg';
+        const sign = unreal >= 0 ? '+' : '';
+        return `<tr>
+          <td><span class="sym">${p.symbol}</span></td>
+          <td class="neutral">${p.qty}</td>
+          <td class="neutral">${fmt(p.avg_entry_price)}</td>
+          <td class="neutral">${fmt(p.current_price)}</td>
+          <td class="${cls}">${sign}${fmt(unreal)}</td>
+          <td class="${cls}">${sign}${unrPct}%</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('positions').innerHTML = `
+        <table>
+          <thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Price</th><th>Unrealized P&L</th><th>%</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    // orders
+    document.getElementById('ord-count').textContent = Array.isArray(orders) ? Math.min(orders.length, 20) : 0;
+    if (!Array.isArray(orders) || orders.length === 0) {
+      document.getElementById('orders').innerHTML = '<div class="empty">No recent orders</div>';
+    } else {
+      const rows = orders.slice(0, 15).map(o => {
+        const badge = o.side === 'buy'
+          ? '<span class="badge badge-buy">BUY</span>'
+          : '<span class="badge badge-sell">SELL</span>';
+        const filled = o.filled_avg_price ? fmt(o.filled_avg_price) : '<span class="neutral">—</span>';
+        const dt = new Date(o.submitted_at);
+        const date = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const time = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const statusCls = o.status === 'filled' ? 'pos' : o.status === 'canceled' ? 'neg' : 'neutral';
+        return `<tr>
+          <td class="neutral" style="font-size:12px;">${date} ${time}</td>
+          <td><span class="sym">${o.symbol}</span></td>
+          <td>${badge}</td>
+          <td class="neutral">${o.qty}</td>
+          <td>${filled}</td>
+          <td class="${statusCls}" style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">${o.status}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('orders').innerHTML = `
+        <table>
+          <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Fill price</th><th>Status</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+  } catch (e) {
+    setErr('Connection error. Check your keys and try again.');
+    document.getElementById('live-badge').textContent = 'ERROR';
+    document.getElementById('live-badge').className = '';
+  }
+}
+</script>
+</body>
+</html>

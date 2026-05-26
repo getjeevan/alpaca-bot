@@ -1,0 +1,40 @@
+[Unit]
+Description=Alpaca Trading Bot - Continuous Loop
+Documentation=https://github.com/alpaca/alpaca-py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/alpaca-bot
+ExecStart=/usr/bin/python3 bot.py
+
+# Environment secrets (NOT IN .env — loaded by systemctl set-environment or /etc/environment)
+# Example: systemctl --user set-environment ALPACA_API_KEY="PKxxx"
+# Or: edit /etc/environment (systemd-system-wide)
+
+# Restart policy: auto-restart on failure
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=300s
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+# Security (relaxed for now - will tighten after testing)
+# PrivateTmp=yes
+# NoNewPrivileges=yes
+# ProtectSystem=strict
+# ProtectHome=yes
+# ReadWritePaths=/root/alpaca-bot /var/log/alpaca-bot
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alpaca-bot
+
+[Install]
+WantedBy=multi-user.target
