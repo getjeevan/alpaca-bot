@@ -1,0 +1,103 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "dockerfile",
+    "dockerfile": "Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "restartPolicyMaxRetries": 3,
+    "restartPolicyWindowSeconds": 300,
+    "startCommand": "python bot.py"
+  },
+  "env": {
+    "ALPACA_API_KEY": {
+      "description": "Alpaca API Key for live trading",
+      "value": "${{ secrets.ALPACA_API_KEY }}"
+    },
+    "ALPACA_SECRET_KEY": {
+      "description": "Alpaca Secret Key for live trading",
+      "value": "${{ secrets.ALPACA_SECRET_KEY }}"
+    },
+    "ALPACA_PAPER": {
+      "description": "Set to false for live trading",
+      "value": "false"
+    },
+    "INITIAL_CAPITAL": {
+      "description": "Initial trading capital for drawdown calculation",
+      "value": "100000"
+    },
+    "ALLOCATION_PER_STOCK": {
+      "description": "Amount to allocate per trade",
+      "value": "1000"
+    },
+    "TAKE_PROFIT": {
+      "description": "Take profit target (5%)",
+      "value": "0.05"
+    },
+    "STOP_LOSS": {
+      "description": "Stop loss limit (-2.5%)",
+      "value": "-0.025"
+    },
+    "DD_CIRCUIT": {
+      "description": "Circuit breaker at -3% drawdown",
+      "value": "-0.03"
+    },
+    "DD_KILL": {
+      "description": "Kill switch at -5% drawdown",
+      "value": "-0.05"
+    },
+    "PDT_LIMIT": {
+      "description": "Max day trades per 5 business days",
+      "value": "3"
+    },
+    "MAX_POSITIONS": {
+      "description": "Maximum concurrent positions",
+      "value": "5"
+    },
+    "MIN_SIGNAL_SCORE": {
+      "description": "Minimum signal score to enter",
+      "value": "2"
+    },
+    "VWAP_DEV_MAX": {
+      "description": "VWAP deviation threshold",
+      "value": "-0.005"
+    },
+    "RSI_MAX": {
+      "description": "RSI threshold for entry",
+      "value": "45.0"
+    },
+    "MIN_REL_VOLUME": {
+      "description": "Minimum relative volume ratio",
+      "value": "1.5"
+    },
+    "WATCHLIST": {
+      "description": "Comma-separated list of symbols to trade",
+      "value": "IONQ,RGTI,BBAI,SOUN,OPEN,CHPT,PLUG,LAZR,RKLB,PRSO"
+    },
+    "ENTRY_WINDOW_END": {
+      "description": "No entries after this time (ET)",
+      "value": "15:30"
+    },
+    "FORCE_CLOSE_TIME": {
+      "description": "Force close all positions by this time (ET)",
+      "value": "15:50"
+    },
+    "INTERVAL_SECONDS": {
+      "description": "Check interval in seconds",
+      "value": "60"
+    },
+    "DRY_RUN": {
+      "description": "Enable dry run mode",
+      "value": "false"
+    },
+    "RUN_ONCE": {
+      "description": "Run once and exit",
+      "value": "false"
+    },
+    "SLACK_WEBHOOK_URL": {
+      "description": "Slack webhook for notifications (optional)",
+      "value": ""
+    }
+  }
+}
