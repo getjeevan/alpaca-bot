@@ -3,6 +3,7 @@ FROM condaforge/miniforge3:latest
 WORKDIR /app
 
 RUN conda install -y \
+  python=3.11 \
   pandas=2.0.3 \
   numpy=1.24.3 \
   pytz \
